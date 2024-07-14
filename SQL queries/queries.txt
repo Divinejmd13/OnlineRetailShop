@@ -1,0 +1,135 @@
+1) Order dispatched but not received and order amount>5000
+
+
+SELECT o.idOrder, t.Amount
+from orders o inner join transaction t on o.Transaction_idTransaction= t.idTransaction
+where t.Amount>5000 and o.Status_Dispatch="Dispatched" and o.Status_Received ="Not received";
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+2) Average
+   -------
+  --> order amount between certain dates
+
+	SELECT avg(t.amount)
+	from transaction t 
+	inner join orders o on o.Transaction_idTransaction= t.idTransaction 
+	inner join order_details d on o.idOrder=d.Order_idOrder
+	where d.Date_Time>"2023-02-12";
+ 
+  --> Average and average difference of total transaction
+	
+	SELECT idTransaction, Amount,
+	(SELECT AVG(Amount)
+			From transaction) as Amount_Average,
+            Amount -( SELECT Amount_Average) as Difference
+	from transaction 
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+             
+3) Customers from particular city that ordered between the given dates
+
+
+select distinct c.idCustomer, c.Name_first, c.Name_last
+from customer c , orders o
+where c.idCustomer in (
+				select o.Customer_idCustomer
+				from orders o inner join order_details d on o.idOrder=d.Order_idOrder
+				where d.Date_Time>"2023-02-09" and d.Date_Time<"2023-02-14") and c.Address_area="South";
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+4)Update of stock of products when stock<20
+
+update product 
+set stock=stock+20 
+where stock<20 and category_category_id=5;
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+5)select customers to which a particular delivery employee has delivered to 
+
+select c.idCustomer, c.Name_first,c.Name_last
+from customer c 
+where c.idCustomer in( select o.Customer_idCustomer
+						from orders o 
+                        where o.idOrder in (select d.Emp_Delivery_idEmp_Delivery 
+											from order_details d
+											where d.Emp_Delivery_idEmp_Delivery in (select b.idEmp_Delivery
+																		from emp_delivery b
+                                                                        where b.Name= "Goldie Kettel")));
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+6)order products from a category by stock and price
+
+SELECT * from product 
+where category_category_id=5
+order by Stock asc, Price desc ;
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+7)select duplicate products
+
+select p.idProduct, p.Name
+from product as p, product as t
+where p.Name=t.Name and p.idProduct !=t.idProduct;
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+8) order customers by most orders made
+
+select c.idCustomer, c.Name_first, c.Name_last, count(o.Customer_idCustomer) as No_of_orders
+from customer as c  join orders as o on c.idCustomer=o.Customer_idCustomer
+
+group by o.Customer_idCustomer
+order by No_of_orders desc;
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+9) Data insertation
+-- -- -- Insert data into the Product table
+ INSERT INTO Product (idProduct, Name, Stock, Price, Bought_At, Product_details, Reviews, category_category_id)
+ VALUES
+ (220, 'T-Shirt', '50', '20.00', '2022-02-16 16:02:43', '100% Cotton', 'Great shirt!', 3),
+ (221, 'Sweatshirt', '30', '40.00', '2022-02-16 16:05:21', '50% Cotton, 50% Polyester', 'Very comfortable', 3),
+ (223, 'Dress', '20', '60.00', '2022-02-16 16:08:15', 'Silk', 'Elegant and beautiful', 3);
+
+-- -- -- Insert data into the Cart table
+INSERT into cart(Number_of_product,Total_price,Cart_id,Customer_idCustomer) 
+ values
+(2,80,110,10),
+ (1,40,111,1);
+-- Insert data into the Cart_has_Product table
+INSERT INTO`cart_has_product` (`Product_idProduct`, `Cart_Cart_id`) VALUES ('112', '10');
+INSERT INTO`cart_has_product` (`Product_idProduct`, `Cart_Cart_id`) VALUES ('102', '10');
+INSERT INTO`cart_has_product` (`Product_idProduct`, `Cart_Cart_id`) VALUES ('2', '20');
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+10) To get those user made more the 10 transcation
+
+select idTransaction,idCustomer,Name_first,Name_last,'Status',Status_Dispatch
+From
+	transaction t
+    join orders o
+				On t.idTransaction=o.Transaction_idTransaction
+	join customer c
+				on o.Customer_idCustomer=c.idCustomer
+    where idCustomer in(
+				select idCustomer
+                from customer
+                group by idCustomer
+                having count(*) >=10
+    )  
+-----------------------------------------------------------------------------------------------------------------------------------------
+11) Club all the cart of Customer and give grand total
+
+SELECT c.idCustomer, SUM(p.price) AS total_price
+FROM customer c
+	JOIN cart cr 
+			ON c.idCustomer = cr.Customer_idCustomer
+	JOIN cart_has_product cp 
+			ON cp.Cart_Cart_id = cr.Cart_id
+	JOIN product p 
+			ON p.idProduct = cp.Product_idProduct
+	GROUP BY c.idCustomer
